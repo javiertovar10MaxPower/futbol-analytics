@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Futbol Analytics</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a1a; color: #e0e0e0; min-height: 100vh; }
+    a { color: #60a5fa; text-decoration: none; }
+
+    .header { background: linear-gradient(135deg, #1a1a3e, #0d0d2b); padding: 12px 20px; border-bottom: 2px solid #2d2d5e; position: sticky; top: 0; z-index: 100; }
+    .header-inner { max-width: 1100px; margin: 0 auto; }
+    .header-top { display: flex; align-items: center; justify-content: space-between; }
+    .header h1 { font-size: 1.3rem; color: #fff; display: flex; align-items: center; gap: 8px; }
+    .live-dot { width: 10px; height: 10px; background: #ff4444; border-radius: 50%; animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .5; transform: scale(1.3); } }
+
+    .nav { display: flex; gap: 4px; margin-top: 10px; }
+    .nav-btn { padding: 8px 18px; border: none; border-radius: 8px 8px 0 0; background: rgba(255,255,255,.05); color: #888; cursor: pointer; font-size: .85rem; transition: all .2s; border-bottom: 2px solid transparent; }
+    .nav-btn:hover { color: #fff; background: rgba(255,255,255,.1); }
+    .nav-btn.active { color: #fff; background: rgba(59,130,246,.15); border-bottom: 2px solid #3b82f6; }
+
+    .filters { background: rgba(255,255,255,.03); border-bottom: 1px solid #1e1e3e; padding: 10px 20px; }
+    .filters-inner { max-width: 1100px; margin: 0 auto; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .filter-group { display: flex; align-items: center; gap: 6px; }
+    .filter-group label { font-size: .75rem; color: #666; text-transform: uppercase; letter-spacing: .5px; }
+    .filter-select { padding: 6px 10px; border: 1px solid #2d2d5e; border-radius: 6px; background: #12122a; color: #fff; font-size: .82rem; min-width: 140px; cursor: pointer; }
+    .filter-select:focus { outline: none; border-color: #3b82f6; }
+    .filter-select option { background: #12122a; }
+
+    .tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tab { padding: 6px 14px; border: none; border-radius: 20px; background: rgba(255,255,255,.06); color: #888; cursor: pointer; font-size: .8rem; transition: all .2s; }
+    .tab:hover { background: rgba(255,255,255,.12); color: #fff; }
+    .tab.active { background: #3b82f6; color: #fff; }
+
+    .main { max-width: 1100px; margin: 0 auto; padding: 16px 20px; }
+
+    .api-config { max-width: 600px; margin: 20px auto; padding: 20px; background: linear-gradient(135deg, #1e293b, #0f172a); border-radius: 12px; border: 1px solid #334155; }
+    .api-config h2 { font-size: 1rem; margin-bottom: 6px; color: #60a5fa; }
+    .api-config p { font-size: .82rem; color: #94a3b8; margin-bottom: 10px; line-height: 1.5; }
+    .input-row { display: flex; gap: 8px; }
+    .input-row input { flex: 1; padding: 8px 12px; border: 1px solid #334155; border-radius: 8px; background: rgba(0,0,0,.3); color: #fff; font-size: .85rem; }
+    .input-row input:focus { outline: none; border-color: #3b82f6; }
+
+    .btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-size: .82rem; transition: all .2s; }
+    .btn-primary { background: #3b82f6; color: #fff; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-danger { background: rgba(239,68,68,.2); color: #ef4444; border: 1px solid rgba(239,68,68,.3); }
+    .btn-secondary { background: rgba(255,255,255,.08); color: #ccc; border: 1px solid #334155; }
+    .btn-secondary:hover { background: rgba(255,255,255,.15); }
+    .btn-sm { padding: 6px 12px; font-size: .75rem; }
+    .settings-toggle { background: none; border: 1px solid #334155; color: #94a3b8; padding: 5px 10px; border-radius: 8px; cursor: pointer; font-size: .8rem; }
+    .settings-toggle:hover { border-color: #3b82f6; color: #60a5fa; }
+
+    .status-bar { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: .78rem; color: #555; margin-bottom: 8px; }
+    .loading { text-align: center; padding: 60px 20px; }
+    .spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,.1); border-top-color: #3b82f6; border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 12px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading p { color: #666; font-size: .85rem; }
+    .error-box { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0; }
+    .error-box p { color: #f87171; margin-bottom: 10px; font-size: .85rem; }
+    .empty-state { text-align: center; padding: 50px 20px; }
+    .empty-state .icon { font-size: 2.5rem; margin-bottom: 10px; }
+    .empty-state h3 { color: #888; margin-bottom: 6px; font-size: 1rem; }
+    .empty-state p { color: #555; font-size: .82rem; }
+
+    .date-input { padding: 6px 10px; border: 1px solid #2d2d5e; border-radius: 6px; background: #12122a; color: #fff; font-size: .82rem; cursor: pointer; }
+    .date-input::-webkit-calendar-picker-indicator { filter: invert(1); }
+
+    .league-group { margin-bottom: 16px; }
+    .league-header { display: flex; align-items: center; gap: 10px; padding: 8px 0; cursor: pointer; user-select: none; }
+    .league-header:hover { opacity: .8; }
+    .league-logo { width: 22px; height: 22px; border-radius: 4px; object-fit: contain; background: rgba(255,255,255,.1); }
+    .league-info { flex: 1; }
+    .league-name { font-size: .82rem; font-weight: 600; color: #fff; }
+    .league-country-text { font-size: .68rem; color: #555; }
+    .league-count { font-size: .72rem; color: #888; background: rgba(255,255,255,.06); padding: 2px 8px; border-radius: 10px; }
+    .chevron { color: #555; font-size: .75rem; transition: transform .2s; }
+    .chevron.open { transform: rotate(90deg); }
+
+    .match-card { background: linear-gradient(135deg, #1e1e3a, #161630); border: 1px solid #2a2a50; border-radius: 10px; padding: 12px 14px; margin-bottom: 6px; transition: all .2s; }
+    .match-card:hover { border-color: #3b3b70; transform: translateY(-1px); }
+    .match-card.live { border-left: 3px solid #ff4444; }
+    .match-card.finished { opacity: .7; }
+    .match-status { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 8px; font-size: .72rem; }
+    .status-live { color: #ff4444; font-weight: 700; display: flex; align-items: center; gap: 4px; }
+    .status-live .dot { width: 6px; height: 6px; background: #ff4444; border-radius: 50%; animation: pulse 1.5s infinite; }
+    .status-scheduled { color: #3b82f6; }
+    .status-finished { color: #666; }
+    .status-halftime { color: #f59e0b; font-weight: 600; }
+    .match-teams { display: flex; align-items: center; gap: 10px; }
+    .team { flex: 1; display: flex; align-items: center; gap: 6px; }
+    .team.away { justify-content: flex-end; text-align: right; }
+    .team.away .team-name { order: -1; }
+    .team-logo { width: 26px; height: 26px; object-fit: contain; }
+    .team-name { font-size: .82rem; font-weight: 500; color: #e0e0e0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+    .score-box { display: flex; align-items: center; gap: 5px; min-width: 65px; justify-content: center; }
+    .score { font-size: 1.4rem; font-weight: 800; color: #fff; min-width: 22px; text-align: center; }
+    .score-divider { color: #555; font-size: 1.1rem; }
+    .score-box.not-started { font-size: .82rem; color: #3b82f6; }
+
+    .standings-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+    .standings-table th { padding: 8px 6px; text-align: left; color: #666; font-weight: 600; border-bottom: 1px solid #1e1e3e; font-size: .7rem; text-transform: uppercase; }
+    .standings-table td { padding: 7px 6px; border-bottom: 1px solid rgba(255,255,255,.04); }
+    .standings-table tr:hover td { background: rgba(255,255,255,.03); }
+    .pos { width: 28px; text-align: center; font-weight: 700; border-radius: 4px; padding: 2px 0; display: inline-block; }
+    .pos-champ { color: #22c55e; background: rgba(34,197,94,.1); }
+    .pos-cl { color: #3b82f6; background: rgba(59,130,246,.1); }
+    .pos-el { color: #f59e0b; background: rgba(245,158,11,.1); }
+    .pos-rel { color: #ef4444; background: rgba(239,68,68,.1); }
+    .team-cell { display: flex; align-items: center; gap: 6px; }
+    .team-cell img { width: 18px; height: 18px; object-fit: contain; }
+    .pts { font-weight: 700; color: #fff; }
+    .form-dots { display: flex; gap: 2px; }
+    .form-dot { width: 18px; height: 18px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: .6rem; font-weight: 700; color: #fff; }
+    .form-w { background: #22c55e; }
+    .form-d { background: #f59e0b; }
+    .form-l { background: #ef4444; }
+
+    .panel { background: linear-gradient(135deg, #141432, #0f0f28); border: 1px solid #1e1e3e; border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+    .panel h3 { font-size: .95rem; color: #fff; margin-bottom: 12px; }
+    .panel-subtitle { font-size: .78rem; color: #666; margin-bottom: 12px; margin-top: -8px; }
+    .panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .stat-card { background: rgba(255,255,255,.04); border-radius: 8px; padding: 12px; text-align: center; }
+    .stat-card .value { font-size: 1.5rem; font-weight: 800; color: #fff; }
+    .stat-card .label { font-size: .72rem; color: #888; margin-top: 2px; }
+    .chart-box { position: relative; width: 100%; height: 320px; }
+
+    .team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+    .team-tile { background: rgba(255,255,255,.04); border: 1px solid #1e1e3e; border-radius: 10px; padding: 14px 10px; text-align: center; cursor: pointer; transition: all .2s; }
+    .team-tile:hover { border-color: #3b82f6; background: rgba(59,130,246,.08); transform: translateY(-2px); }
+    .team-tile img { width: 40px; height: 40px; object-fit: contain; margin-bottom: 6px; }
+    .team-tile span { display: block; font-size: .75rem; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .team-dash-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+    .team-dash-header img { width: 64px; height: 64px; object-fit: contain; }
+    .team-dash-header h2 { font-size: 1.3rem; color: #fff; }
+    .team-dash-header .sub { font-size: .8rem; color: #888; }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; margin-bottom: 16px; }
+
+    .scorers-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+    .scorers-table th { padding: 8px 6px; text-align: left; color: #666; font-weight: 600; border-bottom: 1px solid #1e1e3e; font-size: .7rem; text-transform: uppercase; }
+    .scorers-table td { padding: 6px; border-bottom: 1px solid rgba(255,255,255,.04); }
+    .scorers-table tr:hover td { background: rgba(255,255,255,.03); }
+    .player-cell { display: flex; align-items: center; gap: 8px; }
+    .player-cell img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; background: #1e1e3e; }
+
+    .insight-card { background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.2); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+    .insight-card h4 { font-size: .85rem; color: #60a5fa; margin-bottom: 4px; }
+    .insight-card p { font-size: .8rem; color: #ccc; line-height: 1.4; }
+
+    .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .kpi { background: rgba(255,255,255,.04); border-radius: 10px; padding: 14px; }
+    .kpi .kpi-val { font-size: 1.8rem; font-weight: 800; color: #fff; }
+    .kpi .kpi-label { font-size: .72rem; color: #888; margin-top: 2px; }
+    .kpi .kpi-sub { font-size: .7rem; color: #22c55e; margin-top: 4px; }
+    .kpi .kpi-sub.neg { color: #ef4444; }
+
+    .progress-bar { height: 8px; background: rgba(255,255,255,.08); border-radius: 4px; overflow: hidden; margin-top: 6px; }
+    .progress-bar .fill { height: 100%; border-radius: 4px; transition: width .5s; }
+
+    @media (max-width: 700px) { .panel-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 480px) {
+      .header h1 { font-size: 1rem; }
+      .team-name { max-width: 80px; font-size: .72rem; }
+      .score { font-size: 1.2rem; }
+      .nav-btn { padding: 6px 10px; font-size: .75rem; }
+      .filters-inner { flex-direction: column; align-items: stretch; }
+      .filter-select { width: 100%; }
+      .team-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+      .kpi-row { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"><div class="loading"><div class="spinner"></div><p>Cargando app...</p></div></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel" data-type="module">
+    var { useState, useEffect, useCallback, useRef } = React;
+
+    /* ================================================================
+       API + CACHE
+       ================================================================ */
+    var API_BASE = 'https://v3.football.api-sports.io';
+    function getApiKey() { return localStorage.getItem('football_api_key') || ''; }
+    function saveApiKey(k) { localStorage.setItem('football_api_key', k); }
+    function removeApiKey() { localStorage.removeItem('football_api_key'); }
+
+    function cacheGet(key, ttl) {
+      try { var r = localStorage.getItem('fc_' + key); if (!r) return null; var p = JSON.parse(r); return (Date.now() - p.ts > ttl) ? null : p.data; } catch(e) { return null; }
+    }
+    function cacheSet(key, data) {
+      try { localStorage.setItem('fc_' + key, JSON.stringify({ ts: Date.now(), data: data })); } catch(e) {}
+    }
+
+    function apiFetch(path, cacheTtl) {
+      var k = getApiKey();
+      if (!k) return Promise.reject(new Error('NO_API_KEY'));
+      var ck = path.replace(/[^a-z0-9]/gi, '_');
+      if (cacheTtl && cacheTtl > 0) { var c = cacheGet(ck, cacheTtl); if (c) return Promise.resolve(c); }
+      return fetch(API_BASE + path, { headers: { 'x-apisports-key': k } })
+        .then(function(r) { if (!r.ok) throw new Error(r.status === 403 ? 'INVALID_KEY' : 'HTTP ' + r.status); return r.json(); })
+        .then(function(j) {
+          if (j.errors && Object.keys(j.errors).length) throw new Error(Object.values(j.errors).join(', '));
+          var d = j.response || [];
+          if (cacheTtl && cacheTtl > 0) cacheSet(ck, d);
+          return d;
+        });
+    }
+
+    var HOUR = 3600000, DAY = 86400000;
+    function fetchCountries() { return apiFetch('/countries', DAY); }
+    function fetchLeagues(c) { return apiFetch('/leagues?country=' + encodeURIComponent(c), DAY); }
+    function fetchStandings(l, s) { return apiFetch('/standings?league=' + l + '&season=' + s, HOUR); }
+    function fetchSeasonFixtures(l, s) { return apiFetch('/fixtures?league=' + l + '&season=' + s, HOUR); }
+    function fetchTopScorers(l, s) { return apiFetch('/players/topscorers?league=' + l + '&season=' + s, HOUR); }
+    function fetchTopAssists(l, s) { return apiFetch('/players/topassists?league=' + l + '&season=' + s, HOUR); }
+    function fetchTeamStats(l, s, t) { return apiFetch('/teams/statistics?league=' + l + '&season=' + s + '&team=' + t, HOUR); }
+    function fetchDateRange(from, to, league, season) {
+      var path = '/fixtures?from=' + from + '&to=' + to;
+      if (league) path += '&league=' + league;
+      if (season) path += '&season=' + season;
+      if (!league && !season) path += '&season=' + new Date().getFullYear();
+      return apiFetch(path, 300000);
+    }
+
+    /* ================================================================
+       HELPERS
+       ================================================================ */
+    function todayStr() { return new Date().toISOString().slice(0, 10); }
+    function daysAgo(n) { var d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); }
+    function currentSeason() { return new Date().getFullYear(); }
+
+    function getMatchStatus(f) {
+      var s = f.fixture.status.short, e = f.fixture.status.elapsed;
+      if (['1H','2H','ET','P','BT','LIVE'].indexOf(s) >= 0) return { type: 'live', label: e + "'" };
+      if (s === 'HT') return { type: 'halftime', label: 'Entretiempo' };
+      if (['FT','AET','PEN'].indexOf(s) >= 0) return { type: 'finished', label: s === 'AET' ? 'Final (Prorroga)' : s === 'PEN' ? 'Final (Penales)' : 'Finalizado' };
+      if (['TBD','NS'].indexOf(s) >= 0) return { type: 'scheduled', label: new Date(f.fixture.date).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }) };
+      return { type: 'other', label: s };
+    }
+    function isLive(s) { return ['1H','2H','ET','P','BT','HT','LIVE'].indexOf(s) >= 0; }
+
+    function groupByLeague(fixtures) {
+      var g = {};
+      fixtures.forEach(function(f) { var id = f.league.id; if (!g[id]) g[id] = { league: f.league, matches: [] }; g[id].matches.push(f); });
+      return Object.values(g).sort(function(a, b) {
+        var aL = a.matches.some(function(m) { return isLive(m.fixture.status.short); });
+        var bL = b.matches.some(function(m) { return isLive(m.fixture.status.short); });
+        if (aL && !bL) return -1; if (!aL && bL) return 1;
+        return a.league.name.localeCompare(b.league.name);
+      });
+    }
+
+    function extractStandings(raw) {
+      if (!raw || !raw.length) return [];
+      var first = raw[0];
+      if (first && first.league && first.league.standings && first.league.standings[0]) return first.league.standings[0];
+      return [];
+    }
+
+    function normalCDF(x) {
+      var sign = x < 0 ? -1 : 1;
+      x = Math.abs(x) / Math.sqrt(2);
+      var t = 1.0 / (1.0 + 0.3275911 * x);
+      var y = 1.0 - ((((1.061405429*t - 1.453152027)*t + 1.421413741)*t - 0.284496736)*t + 0.254829592)*t*Math.exp(-x*x);
+      return 0.5 * (1.0 + sign * y);
+    }
+
+    function calcProbs(standings) {
+      if (!standings || standings.length < 2) return [];
+      var totalG = (standings.length - 1) * 2;
+      var teams = standings.map(function(t) {
+        var rem = Math.max(0, totalG - t.all.played);
+        var ppg = t.all.played > 0 ? t.points / t.all.played : 1;
+        var form = t.form || '';
+        var last5 = form.slice(-5);
+        var rppg = ppg;
+        if (last5.length > 0) { var rp = 0; for (var i = 0; i < last5.length; i++) { if (last5[i]==='W') rp+=3; else if (last5[i]==='D') rp+=1; } rppg = rp/last5.length; }
+        var w = Math.min(t.all.played/10, 0.7);
+        var wppg = ppg*(1 - w*0.4) + rppg*(w*0.4);
+        return { id: t.team.id, name: t.team.name, logo: t.team.logo, pts: t.points, played: t.all.played, gf: t.all.goals['for'], ga: t.all.goals.against, w: t.all.win, d: t.all.draw, l: t.all.lose, form: form, rem: rem, ef: t.points + rem*wppg, sd: Math.sqrt(Math.max(rem,1))*1.8, max: t.points+rem*3, ppg: ppg, rppg: rppg };
+      });
+      var best = Math.max.apply(null, teams.map(function(t){return t.ef;}));
+      teams.forEach(function(t) { t.prob = Math.max(normalCDF(-(best - t.ef)/Math.max(t.sd,2)), 0.001); });
+      var tot = teams.reduce(function(s,t){return s+t.prob;}, 0);
+      teams.forEach(function(t) { t.prob = tot > 0 ? (t.prob/tot)*100 : 0; });
+      return teams.sort(function(a,b){return b.prob - a.prob;});
+    }
+
+    function calcEvolution(standings, fixtures) {
+      if (!standings.length || !fixtures.length) return { labels: [], datasets: [] };
+      var played = fixtures.filter(function(f){return ['FT','AET','PEN'].indexOf(f.fixture.status.short)>=0;});
+      played.sort(function(a,b){return new Date(a.fixture.date)-new Date(b.fixture.date);});
+      if (!played.length) return { labels: [], datasets: [] };
+
+      var tMap = {}; standings.forEach(function(t){tMap[t.team.id]={name:t.team.name};});
+      var topIds = standings.slice(0,6).map(function(t){return t.team.id;});
+      var colors = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#a855f7','#06b6d4'];
+      var totalG = (standings.length-1)*2;
+      var chunk = Math.max(1, Math.ceil(played.length/15));
+      var rounds = [];
+      for (var i=0; i<played.length; i+=chunk) rounds.push(played.slice(0, i+chunk));
+
+      var evo = {}; topIds.forEach(function(id){evo[id]=[];}); var labels = [];
+
+      rounds.forEach(function(rf, ri) {
+        var pts={}; var pld={}; standings.forEach(function(t){pts[t.team.id]=0; pld[t.team.id]=0;});
+        rf.forEach(function(f) {
+          var hId=f.teams.home.id, aId=f.teams.away.id, hg=f.goals.home||0, ag=f.goals.away||0;
+          if (pts[hId]!==undefined && pts[aId]!==undefined) {
+            pld[hId]++; pld[aId]++;
+            if (hg>ag) pts[hId]+=3; else if (hg<ag) pts[aId]+=3; else { pts[hId]++; pts[aId]++; }
+          }
+        });
+        var sim = standings.map(function(t) {
+          var p=pts[t.team.id]||0, pl=pld[t.team.id]||0, rm=Math.max(0,totalG-pl);
+          return { id:t.team.id, ef:p+rm*(pl>0?p/pl:1), sd:Math.sqrt(Math.max(rm,1))*1.8 };
+        });
+        var best = Math.max.apply(null, sim.map(function(t){return t.ef;}));
+        sim.forEach(function(t){t.prob = Math.max(normalCDF(-(best-t.ef)/Math.max(t.sd,2)),0.001);});
+        var tot = sim.reduce(function(s,t){return s+t.prob;},0);
+        sim.forEach(function(t){t.prob = tot>0?(t.prob/tot)*100:0;});
+        labels.push('J'+(ri+1));
+        topIds.forEach(function(id) { var s=sim.find(function(t){return t.id===id;}); evo[id].push(s?s.prob:0); });
+      });
+
+      return { labels: labels, datasets: topIds.map(function(id,i) {
+        return { label: (tMap[id] && tMap[id].name)||'', data: evo[id], borderColor: colors[i%6], backgroundColor: colors[i%6]+'20', tension:.3, fill:false, pointRadius:2 };
+      })};
+    }
+
+    /* ================================================================
+       SHARED COMPONENTS
+       ================================================================ */
+    function ApiKeySetup(props) {
+      var _s = useState(getApiKey()), key=_s[0], setK=_s[1];
+      return (
+        <div className="api-config">
+          <h2>{getApiKey()?'API Key Configurada':'Configurar API Key'}</h2>
+          <p>1. Ve a <a href="https://dashboard.api-football.com/register" target="_blank">dashboard.api-football.com</a> y crea una cuenta gratis<br/>2. En tu perfil, copia tu API Key<br/>3. Pegala aqui</p>
+          <div className="input-row">
+            <input placeholder="Pega tu API key aqui..." value={key} onChange={function(e){setK(e.target.value);}} onKeyDown={function(e){if(e.key==='Enter'&&key.trim()){saveApiKey(key.trim());props.onSave();}}}/>
+            <button className="btn btn-primary" onClick={function(){if(key.trim()){saveApiKey(key.trim());props.onSave();}}}>Guardar</button>
+            {getApiKey() && <button className="btn btn-danger" onClick={function(){setK('');removeApiKey();props.onSave();}}>Borrar</button>}
+          </div>
+        </div>
+      );
+    }
+
+    function MatchCard(props) {
+      var f = props.fixture, st = getMatchStatus(f), h=f.teams.home, a=f.teams.away, g=f.goals;
+      var cls = 'match-card' + (st.type==='live'||st.type==='halftime'?' live':'') + (st.type==='finished'?' finished':'');
+      return (
+        <div className={cls}>
+          <div className="match-status">
+            {st.type==='live' && <span className="status-live"><span className="dot"></span> {st.label}</span>}
+            {st.type==='halftime' && <span className="status-halftime">{st.label}</span>}
+            {st.type==='scheduled' && <span className="status-scheduled">{st.label}</span>}
+            {(st.type==='finished'||st.type==='other') && <span className="status-finished">{st.label}</span>}
+          </div>
+          <div className="match-teams">
+            <div className="team home"><img className="team-logo" src={h.logo} alt="" loading="lazy"/><span className="team-name">{h.name}</span></div>
+            {st.type !== 'scheduled' ? <div className="score-box"><span className="score">{g.home!=null?g.home:0}</span><span className="score-divider">-</span><span className="score">{g.away!=null?g.away:0}</span></div> : <div className="score-box not-started">vs</div>}
+            <div className="team away"><img className="team-logo" src={a.logo} alt="" loading="lazy"/><span className="team-name">{a.name}</span></div>
+          </div>
+        </div>
+      );
+    }
+
+    function LeagueGroup(props) {
+      var g=props.group, _o=useState(true), open=_o[0], setOpen=_o[1];
+      return (
+        <div className="league-group">
+          <div className="league-header" onClick={function(){setOpen(!open);}}>
+            <img className="league-logo" src={g.league.logo} alt="" loading="lazy"/>
+            <div className="league-info"><div className="league-name">{g.league.name}</div><div className="league-country-text">{g.league.country}</div></div>
+            <span className="league-count">{g.matches.length}</span>
+            <span className={'chevron'+(open?' open':'')}>&#9654;</span>
+          </div>
+          {open && g.matches.map(function(m){return <MatchCard key={m.fixture.id} fixture={m}/>;}) }
+        </div>
+      );
+    }
+
+    function ChartWrap(props) {
+      var cvs = useRef(null), ch = useRef(null);
+      useEffect(function() {
+        if (!cvs.current || !props.data) return;
+        if (ch.current) { ch.current.destroy(); ch.current = null; }
+        var opts = Object.assign({}, props.options||{}, { responsive:true, maintainAspectRatio:false });
+        if (!opts.plugins) opts.plugins = {};
+        opts.plugins.legend = Object.assign({}, opts.plugins.legend||{}, { labels: { color:'#aaa', font:{size:11} } });
+        ch.current = new Chart(cvs.current, { type: props.type, data: props.data, options: opts });
+        return function(){ if(ch.current){ch.current.destroy();ch.current=null;} };
+      }, [props.data, props.type]);
+      return <div className="chart-box" style={{height:props.height||'320px'}}><canvas ref={cvs}></canvas></div>;
+    }
+
+    function FormDots(props) {
+      return (
+        <div className="form-dots">
+          {(props.form||'').split('').map(function(c,i) {
+            return <span key={i} className={'form-dot '+(c==='W'?'form-w':c==='D'?'form-d':'form-l')}>{c==='W'?'V':c==='D'?'E':'D'}</span>;
+          })}
+        </div>
+      );
+    }
+
+    /* ================================================================
+       PAGE: MARCADORES (con rango de fechas)
+       ================================================================ */
+    function PageMarcadores(props) {
+      var leagueId = props.leagueId, season = props.season;
+      var _m=useState('today'), mode=_m[0], setMode=_m[1];
+      var _df=useState(daysAgo(7)), dateFrom=_df[0], setDateFrom=_df[1];
+      var _dt=useState(todayStr()), dateTo=_dt[0], setDateTo=_dt[1];
+      var _fx=useState([]), fixtures=_fx[0], setFixtures=_fx[1];
+      var _ld=useState(false), loading=_ld[0], setLoading=_ld[1];
+      var _er=useState(null), error=_er[0], setError=_er[1];
+      var _cd=useState(60), cd=_cd[0], setCd=_cd[1];
+      var tmr=useRef(null), cdr=useRef(null);
+
+      var load = useCallback(function() {
+        setLoading(true); setError(null);
+        var p;
+        if (mode==='live') p = apiFetch('/fixtures?live=all', 0);
+        else if (mode==='today') p = apiFetch('/fixtures?date='+todayStr(), 60000);
+        else p = fetchDateRange(dateFrom, dateTo, leagueId, season);
+
+        p.then(function(data) {
+          if (leagueId) data = data.filter(function(f){return f.league.id===leagueId;});
+          data.sort(function(a,b) {
+            var aL=isLive(a.fixture.status.short), bL=isLive(b.fixture.status.short);
+            if(aL&&!bL) return -1; if(!aL&&bL) return 1;
+            return new Date(a.fixture.date) - new Date(b.fixture.date);
+          });
+          setFixtures(data);
+        }).catch(function(e){setError(e.message);}).finally(function(){setLoading(false);});
+      }, [mode, dateFrom, dateTo, leagueId, season]);
+
+      useEffect(function() {
+        load(); setCd(60);
+        clearInterval(tmr.current); clearInterval(cdr.current);
+        tmr.current = setInterval(function(){load();setCd(60);}, 60000);
+        cdr.current = setInterval(function(){setCd(function(p){return p>0?p-1:60;});}, 1000);
+        return function(){clearInterval(tmr.current);clearInterval(cdr.current);};
+      }, [load]);
+
+      var groups = groupByLeague(fixtures);
+      return (
+        <div>
+          <div className="tabs">
+            <button className={'tab'+(mode==='live'?' active':'')} onClick={function(){setMode('live');}}>En Vivo</button>
+            <button className={'tab'+(mode==='today'?' active':'')} onClick={function(){setMode('today');}}>Hoy</button>
+            <button className={'tab'+(mode==='range'?' active':'')} onClick={function(){setMode('range');}}>Rango de Fechas</button>
+          </div>
+          {mode==='range' && (
+            <div style={{display:'flex',gap:'10px',alignItems:'center',marginBottom:'12px',flexWrap:'wrap'}}>
+              <label style={{fontSize:'.78rem',color:'#888'}}>Desde:</label>
+              <input type="date" className="date-input" value={dateFrom} onChange={function(e){setDateFrom(e.target.value);}}/>
+              <label style={{fontSize:'.78rem',color:'#888'}}>Hasta:</label>
+              <input type="date" className="date-input" value={dateTo} onChange={function(e){setDateTo(e.target.value);}}/>
+            </div>
+          )}
+          <div className="status-bar"><span>{fixtures.length} partidos</span><span>Actualizacion en {cd}s</span></div>
+          {loading && fixtures.length===0 && <div className="loading"><div className="spinner"></div><p>Cargando partidos...</p></div>}
+          {error && <div className="error-box"><p>{error==='NO_API_KEY'?'Configura tu API key.':error==='INVALID_KEY'?'API key invalida.':'Error: '+error}</p><button className="btn btn-danger" onClick={load}>Reintentar</button></div>}
+          {!loading && !error && fixtures.length===0 && <div className="empty-state"><div className="icon">&#9917;</div><h3>No hay partidos</h3><p>No se encontraron partidos para este periodo.</p></div>}
+          {fixtures.length>0 && groups.map(function(g){return <LeagueGroup key={g.league.id} group={g}/>;}) }
+        </div>
+      );
+    }
+
+    /* ================================================================
+       PAGE: ANALYTICS (mejorado)
+       ================================================================ */
+    function PageAnalytics(props) {
+      var leagueId=props.leagueId, season=props.season;
+      var _st=useState([]), standings=_st[0], setSt=_st[1];
+      var _fx=useState([]), fixtures=_fx[0], setFx=_fx[1];
+      var _sc=useState([]), scorers=_sc[0], setSc=_sc[1];
+      var _as=useState([]), assists=_as[0], setAs=_as[1];
+      var _ld=useState(false), loading=_ld[0], setLoading=_ld[1];
+      var _er=useState(null), error=_er[0], setError=_er[1];
+      var _tb=useState('resumen'), tab=_tb[0], setTab=_tb[1];
+
+      useEffect(function() {
+        if (!leagueId) return;
+        setLoading(true); setError(null);
+        Promise.all([
+          fetchStandings(leagueId,season).catch(function(){return [];}),
+          fetchSeasonFixtures(leagueId,season).catch(function(){return [];}),
+          fetchTopScorers(leagueId,season).catch(function(){return [];}),
+          fetchTopAssists(leagueId,season).catch(function(){return [];})
+        ]).then(function(r) { setSt(extractStandings(r[0])); setFx(r[1]); setSc(r[2]); setAs(r[3]); })
+        .catch(function(e){setError(e.message);}).finally(function(){setLoading(false);});
+      }, [leagueId, season]);
+
+      if (!leagueId) return <div className="empty-state"><div className="icon">&#128202;</div><h3>Selecciona una liga</h3><p>Usa los filtros de arriba para elegir pais y liga, luego vuelve a Analytics.</p></div>;
+      if (loading) return <div className="loading"><div className="spinner"></div><p>Cargando analytics...</p></div>;
+      if (error) return <div className="error-box"><p>{error}</p></div>;
+      if (!standings.length) return <div className="empty-state"><h3>Sin datos para esta liga/temporada</h3></div>;
+
+      var probs = calcProbs(standings);
+      var evo = calcEvolution(standings, fixtures);
+      var played = fixtures.filter(function(f){return ['FT','AET','PEN'].indexOf(f.fixture.status.short)>=0;});
+      var totalGoals = played.reduce(function(s,f){return s+(f.goals.home||0)+(f.goals.away||0);},0);
+      var avgGoals = played.length>0?(totalGoals/played.length).toFixed(2):'0';
+      var homeWins=0, draws=0, awayWins=0;
+      played.forEach(function(f) { var h=f.goals.home||0,a=f.goals.away||0; if(h>a)homeWins++; else if(a>h)awayWins++; else draws++; });
+      var leader = standings[0];
+      var bestAttack = standings.slice().sort(function(a,b){return b.all.goals['for']-a.all.goals['for'];})[0];
+      var bestDefense = standings.slice().sort(function(a,b){return a.all.goals.against-b.all.goals.against;})[0];
+
+      var tabs = {resumen:'Resumen',tabla:'Posiciones',probabilidad:'Probabilidad',evolucion:'Evolucion',tendencias:'Tendencias',goleadores:'Goleadores'};
+      return (
+        <div>
+          <div className="tabs">
+            {Object.keys(tabs).map(function(t){return <button key={t} className={'tab'+(tab===t?' active':'')} onClick={function(){setTab(t);}}>{tabs[t]}</button>;})}
+          </div>
+
+          {tab==='resumen' && (
+            <div>
+              <div className="kpi-row">
+                <div className="kpi"><div className="kpi-val">{played.length}</div><div className="kpi-label">Partidos Jugados</div></div>
+                <div className="kpi"><div className="kpi-val">{totalGoals}</div><div className="kpi-label">Goles Totales</div></div>
+                <div className="kpi"><div className="kpi-val">{avgGoals}</div><div className="kpi-label">Promedio Goles/Partido</div></div>
+                <div className="kpi"><div className="kpi-val">{standings.length}</div><div className="kpi-label">Equipos</div></div>
+              </div>
+              <div className="panel-grid">
+                <div className="panel">
+                  <h3>Resultados de la Temporada</h3>
+                  <ChartWrap type="doughnut" data={{labels:['Local','Empate','Visitante'],datasets:[{data:[homeWins,draws,awayWins],backgroundColor:['#3b82f6','#f59e0b','#ef4444'],borderWidth:0}]}} height="250px" options={{plugins:{legend:{position:'bottom'}}}}/>
+                </div>
+                <div className="panel">
+                  <h3>Favorito al Titulo</h3>
+                  {probs.length>0 && (
+                    <div>
+                      <div style={{display:'flex',alignItems:'center',gap:'12px',marginBottom:'12px'}}>
+                        <img src={probs[0].logo} alt="" style={{width:'48px',height:'48px'}}/>
+                        <div>
+                          <div style={{fontSize:'1.1rem',fontWeight:700,color:'#fff'}}>{probs[0].name}</div>
+                          <div style={{fontSize:'1.8rem',fontWeight:800,color:'#22c55e'}}>{probs[0].prob.toFixed(1)}%</div>
+                        </div>
+                      </div>
+                      {probs.slice(1,4).map(function(t) {
+                        return (
+                          <div key={t.id} style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'8px'}}>
+                            <img src={t.logo} alt="" style={{width:'20px',height:'20px'}}/>
+                            <span style={{flex:1,fontSize:'.82rem',color:'#ccc'}}>{t.name}</span>
+                            <span style={{fontSize:'.82rem',fontWeight:700,color:'#60a5fa'}}>{t.prob.toFixed(1)}%</span>
+                            <div className="progress-bar" style={{width:'100px'}}><div className="fill" style={{width:t.prob+'%',background:'#3b82f6'}}></div></div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="panel-grid">
+                <div className="insight-card">
+                  <h4>Lider: {leader.team.name}</h4>
+                  <p>{leader.points} puntos en {leader.all.played} partidos ({leader.all.win}V-{leader.all.draw}E-{leader.all.lose}D). PPG: {(leader.points/Math.max(leader.all.played,1)).toFixed(2)}</p>
+                </div>
+                <div className="insight-card">
+                  <h4>Mejor Ataque: {bestAttack.team.name}</h4>
+                  <p>{bestAttack.all.goals['for']} goles a favor ({(bestAttack.all.goals['for']/Math.max(bestAttack.all.played,1)).toFixed(2)} por partido)</p>
+                </div>
+                <div className="insight-card">
+                  <h4>Mejor Defensa: {bestDefense.team.name}</h4>
+                  <p>{bestDefense.all.goals.against} goles en contra ({(bestDefense.all.goals.against/Math.max(bestDefense.all.played,1)).toFixed(2)} por partido)</p>
+                </div>
+                <div className="insight-card">
+                  <h4>Tendencia Local vs Visitante</h4>
+                  <p>Victorias locales: {homeWins} ({played.length>0?Math.round(homeWins/played.length*100):0}%) | Visitante: {awayWins} ({played.length>0?Math.round(awayWins/played.length*100):0}%) | Empates: {draws}</p>
+                </div>
+              </div>
+              {scorers.length>0 && (
+                <div className="panel">
+                  <h3>Top 5 Goleadores</h3>
+                  {scorers.slice(0,5).map(function(p,i) {
+                    var st=p.statistics[0]||{}, gl=(st.goals&&st.goals.total)||0, tm=(st.team&&st.team.name)||'';
+                    return <div key={p.player.id} style={{display:'flex',alignItems:'center',gap:'10px',padding:'6px 0',borderBottom:'1px solid rgba(255,255,255,.04)'}}>
+                      <span style={{fontWeight:700,color:i<3?'#f59e0b':'#888',width:'20px'}}>{i+1}</span>
+                      <img src={p.player.photo} alt="" style={{width:'28px',height:'28px',borderRadius:'50%',background:'#1e1e3e'}}/>
+                      <div style={{flex:1}}><div style={{fontSize:'.82rem',color:'#fff'}}>{p.player.name}</div><div style={{fontSize:'.7rem',color:'#666'}}>{tm}</div></div>
+                      <span style={{fontSize:'1.1rem',fontWeight:800,color:'#fff'}}>{gl}</span>
+                    </div>;
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab==='tabla' && (
+            <div className="panel" style={{overflowX:'auto'}}>
+              <h3>Tabla de Posiciones</h3>
+              <table className="standings-table">
+                <thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PE</th><th>PP</th><th>GF</th><th>GC</th><th>DG</th><th>Pts</th><th>Forma</th></tr></thead>
+                <tbody>
+                  {standings.map(function(t,i) {
+                    var pc=''; if(i===0)pc='pos-champ'; else if(i<4)pc='pos-cl'; else if(i<6)pc='pos-el'; if(i>=standings.length-3)pc='pos-rel';
+                    return <tr key={t.team.id}><td><span className={'pos '+pc}>{t.rank}</span></td><td><div className="team-cell"><img src={t.team.logo} alt=""/>{t.team.name}</div></td><td>{t.all.played}</td><td>{t.all.win}</td><td>{t.all.draw}</td><td>{t.all.lose}</td><td>{t.all.goals['for']}</td><td>{t.all.goals.against}</td><td>{t.goalsDiff}</td><td className="pts">{t.points}</td><td><FormDots form={(t.form||'').slice(-5)}/></td></tr>;
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {tab==='probabilidad' && (
+            <div>
+              <div className="panel">
+                <h3>Probabilidad de Campeonato</h3>
+                <p className="panel-subtitle">Modelo predictivo: puntos actuales + PPG ponderado por forma reciente + distribucion normal sobre partidos restantes.</p>
+                <ChartWrap type="bar" data={{labels:probs.slice(0,10).map(function(t){return t.name;}),datasets:[{label:'Probabilidad (%)',data:probs.slice(0,10).map(function(t){return Math.round(t.prob*10)/10;}),backgroundColor:probs.slice(0,10).map(function(_,i){return 'hsl('+(220+i*15)+',70%,'+(55-i*3)+'%)';}),borderRadius:6}]}} height="350px" options={{indexAxis:'y',scales:{x:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888',callback:function(v){return v+'%';}}},y:{grid:{display:false},ticks:{color:'#ccc',font:{size:11}}}}}}/>
+              </div>
+              <div className="panel" style={{overflowX:'auto'}}>
+                <h3>Detalle del Modelo</h3>
+                <table className="standings-table">
+                  <thead><tr><th>Equipo</th><th>Pts</th><th>PPG</th><th>Forma PPG</th><th>Restantes</th><th>Pts Esperados</th><th>Prob</th></tr></thead>
+                  <tbody>{probs.slice(0,10).map(function(t) { return <tr key={t.id}><td><div className="team-cell"><img src={t.logo} alt="" style={{width:'18px',height:'18px'}}/>{t.name}</div></td><td className="pts">{t.pts}</td><td>{t.ppg.toFixed(2)}</td><td>{t.rppg.toFixed(2)}</td><td>{t.rem}</td><td>{Math.round(t.ef)}</td><td style={{color:'#3b82f6',fontWeight:700}}>{t.prob.toFixed(1)}%</td></tr>; })}</tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {tab==='evolucion' && (
+            <div className="panel">
+              <h3>Evolucion de Probabilidad en la Temporada</h3>
+              <p className="panel-subtitle">Como ha cambiado la probabilidad del campeonato para los 6 principales equipos jornada a jornada.</p>
+              {evo.labels.length>0 ? <ChartWrap type="line" data={evo} height="380px" options={{scales:{x:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888'}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888',callback:function(v){return v+'%';}},min:0}}}}/> : <div className="empty-state"><h3>Sin datos suficientes</h3></div>}
+            </div>
+          )}
+
+          {tab==='tendencias' && (
+            <div className="panel" style={{overflowX:'auto'}}>
+              <h3>Tendencias y Forma Reciente</h3>
+              <table className="standings-table">
+                <thead><tr><th>Equipo</th><th>Pts</th><th>PJ</th><th>GF</th><th>GC</th><th>DG</th><th>Ultimos 5</th><th>Racha</th></tr></thead>
+                <tbody>{standings.slice(0,15).map(function(t) {
+                  var form=(t.form||'').slice(-5), lc=form[form.length-1]||'', cnt=1;
+                  for(var i=form.length-2;i>=0;i--){if(form[i]===lc)cnt++;else break;}
+                  var streak=cnt+(lc==='W'?'V':lc==='D'?'E':'D');
+                  var sc=lc==='W'?'#22c55e':lc==='L'?'#ef4444':'#f59e0b';
+                  return <tr key={t.team.id}><td><div className="team-cell"><img src={t.team.logo} alt="" style={{width:'18px',height:'18px'}}/>{t.team.name}</div></td><td className="pts">{t.points}</td><td>{t.all.played}</td><td>{t.all.goals['for']}</td><td>{t.all.goals.against}</td><td>{t.goalsDiff}</td><td><FormDots form={form}/></td><td style={{fontWeight:600,color:sc}}>{streak}</td></tr>;
+                })}</tbody>
+              </table>
+            </div>
+          )}
+
+          {tab==='goleadores' && (
+            <div className="panel-grid">
+              <div className="panel" style={{overflowX:'auto'}}>
+                <h3>Goleadores</h3>
+                <table className="scorers-table">
+                  <thead><tr><th>#</th><th>Jugador</th><th>Equipo</th><th>Goles</th><th>Asist.</th><th>PJ</th></tr></thead>
+                  <tbody>{scorers.slice(0,15).map(function(p,i) {
+                    var s=p.statistics[0]||{}, tm=s.team||{}, gl=s.goals||{}, gm=s.games||{};
+                    return <tr key={p.player.id}><td style={{fontWeight:700,color:i<3?'#f59e0b':'#888'}}>{i+1}</td><td><div className="player-cell"><img src={p.player.photo} alt=""/>{p.player.name}</div></td><td><div className="team-cell"><img src={tm.logo||''} alt="" style={{width:'16px',height:'16px'}}/>{tm.name||''}</div></td><td className="pts">{gl.total||0}</td><td>{gl.assists||0}</td><td>{gm.appearences||0}</td></tr>;
+                  })}</tbody>
+                </table>
+              </div>
+              <div className="panel" style={{overflowX:'auto'}}>
+                <h3>Asistencias</h3>
+                <table className="scorers-table">
+                  <thead><tr><th>#</th><th>Jugador</th><th>Equipo</th><th>Asist.</th><th>Goles</th><th>PJ</th></tr></thead>
+                  <tbody>{assists.slice(0,15).map(function(p,i) {
+                    var s=p.statistics[0]||{}, tm=s.team||{}, gl=s.goals||{}, gm=s.games||{};
+                    return <tr key={p.player.id}><td style={{fontWeight:700,color:i<3?'#a855f7':'#888'}}>{i+1}</td><td><div className="player-cell"><img src={p.player.photo} alt=""/>{p.player.name}</div></td><td><div className="team-cell"><img src={tm.logo||''} alt="" style={{width:'16px',height:'16px'}}/>{tm.name||''}</div></td><td className="pts">{gl.assists||0}</td><td>{gl.total||0}</td><td>{gm.appearences||0}</td></tr>;
+                  })}</tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ================================================================
+       PAGE: EQUIPOS (mejorado)
+       ================================================================ */
+    function PageEquipos(props) {
+      var leagueId=props.leagueId, season=props.season, standings=props.standings;
+      var _sel=useState(null), sel=_sel[0], setSel=_sel[1];
+      var _st=useState(null), stats=_st[0], setStats=_st[1];
+      var _ld=useState(false), loading=_ld[0], setLoading=_ld[1];
+      var _er=useState(null), error=_er[0], setError=_er[1];
+
+      useEffect(function(){setSel(null);setStats(null);},[leagueId,season]);
+
+      function loadTeam(team) {
+        setSel(team); setLoading(true); setError(null); setStats(null);
+        fetchTeamStats(leagueId,season,team.id).then(function(d){setStats(d);}).catch(function(e){setError(e.message);}).finally(function(){setLoading(false);});
+      }
+
+      if (!leagueId) return <div className="empty-state"><div className="icon">&#9917;</div><h3>Selecciona una liga</h3><p>Usa los filtros para elegir pais y liga, luego vuelve a Equipos.</p></div>;
+
+      if (!sel) {
+        return (
+          <div>
+            <div className="panel"><h3>Selecciona un Equipo ({standings.length} equipos)</h3></div>
+            <div className="team-grid">
+              {standings.map(function(t) {
+                return <div key={t.team.id} className="team-tile" onClick={function(){loadTeam(t.team);}}><img src={t.team.logo} alt=""/><span>{t.team.name}</span></div>;
+              })}
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div>
+          <button className="btn btn-secondary btn-sm" onClick={function(){setSel(null);setStats(null);}} style={{marginBottom:'16px'}}>&#8592; Volver a equipos</button>
+          {loading && <div className="loading"><div className="spinner"></div><p>Cargando estadisticas de {sel.name}...</p></div>}
+          {error && <div className="error-box"><p>{error}</p></div>}
+          {stats && <TeamDash team={sel} stats={stats} standings={standings} season={season}/>}
+        </div>
+      );
+    }
+
+    function TeamDash(props) {
+      var team=props.team, s=props.stats, standings=props.standings, season=props.season;
+      var W=(s.fixtures&&s.fixtures.wins&&s.fixtures.wins.total)||0;
+      var D=(s.fixtures&&s.fixtures.draws&&s.fixtures.draws.total)||0;
+      var L=(s.fixtures&&s.fixtures.loses&&s.fixtures.loses.total)||0;
+      var P=W+D+L;
+      var GF=(s.goals&&s.goals['for']&&s.goals['for'].total&&s.goals['for'].total.total)||0;
+      var GA=(s.goals&&s.goals.against&&s.goals.against.total&&s.goals.against.total.total)||0;
+      var gfH=(s.goals&&s.goals['for']&&s.goals['for'].total&&s.goals['for'].total.home)||0;
+      var gfA=(s.goals&&s.goals['for']&&s.goals['for'].total&&s.goals['for'].total.away)||0;
+      var gaH=(s.goals&&s.goals.against&&s.goals.against.total&&s.goals.against.total.home)||0;
+      var gaA=(s.goals&&s.goals.against&&s.goals.against.total&&s.goals.against.total.away)||0;
+      var wH=(s.fixtures&&s.fixtures.wins&&s.fixtures.wins.home)||0;
+      var wA=(s.fixtures&&s.fixtures.wins&&s.fixtures.wins.away)||0;
+      var cs=(s.clean_sheet&&s.clean_sheet.total)||0;
+      var pen=(s.penalty&&s.penalty.scored&&s.penalty.scored.total)||0;
+      var penM=(s.penalty&&s.penalty.missed&&s.penalty.missed.total)||0;
+      var bWH=(s.biggest&&s.biggest.wins&&s.biggest.wins.home)||'-';
+      var bWA=(s.biggest&&s.biggest.wins&&s.biggest.wins.away)||'-';
+      var bLH=(s.biggest&&s.biggest.loses&&s.biggest.loses.home)||'-';
+      var bLA=(s.biggest&&s.biggest.loses&&s.biggest.loses.away)||'-';
+      var streakW=(s.biggest&&s.biggest.streak&&s.biggest.streak.wins)||0;
+      var streakD=(s.biggest&&s.biggest.streak&&s.biggest.streak.draws)||0;
+      var streakL=(s.biggest&&s.biggest.streak&&s.biggest.streak.loses)||0;
+      var form=s.form||'';
+      var teamSt=standings.find(function(t){return t.team.id===team.id;});
+      var rank=teamSt?teamSt.rank:'-';
+      var winRate=P>0?Math.round(W/P*100):0;
+
+      function genReport() {
+        var formH=form.split('').slice(-10).map(function(c){var cl=c==='W'?'fw':c==='D'?'fd':'ffl'; return '<div class="fb '+cl+'">'+(c==='W'?'V':c==='D'?'E':'D')+'</div>';}).join('');
+        var w=window.open('','_blank');
+        w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte '+team.name+'</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:30px;color:#222;max-width:800px;margin:0 auto}h1{display:flex;align-items:center;gap:12px;margin-bottom:4px}h1 img{width:50px;height:50px}.sub{color:#666;margin-bottom:24px;font-size:.9rem}h2{color:#1a1a3e;border-bottom:2px solid #3b82f6;padding-bottom:4px;margin:20px 0 12px;font-size:1.1rem}.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}.st{background:#f0f4ff;border-radius:8px;padding:12px;text-align:center}.st .v{font-size:1.5rem;font-weight:800;color:#1a1a3e}.st .l{font-size:.75rem;color:#666;margin-top:2px}table{width:100%;border-collapse:collapse;font-size:.85rem;margin-bottom:16px}th{background:#1a1a3e;color:#fff;padding:8px;text-align:left}td{padding:6px 8px;border-bottom:1px solid #eee}.fr{display:flex;gap:4px;margin:12px 0}.fb{width:24px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.7rem;font-weight:700}.fw{background:#22c55e}.fd{background:#f59e0b}.ffl{background:#ef4444}.ft{margin-top:30px;padding-top:12px;border-top:1px solid #ddd;font-size:.75rem;color:#999;text-align:center}@media print{body{padding:15px}}</style></head><body>'+
+          '<h1><img src="'+team.logo+'"/>'+team.name+'</h1><p class="sub">Temporada '+season+'/'+(season+1)+' | Posicion: '+rank+' | Generado: '+new Date().toLocaleDateString('es')+'</p>'+
+          '<h2>Estadisticas Generales</h2><div class="sg"><div class="st"><div class="v">'+P+'</div><div class="l">Partidos</div></div><div class="st"><div class="v">'+W+'</div><div class="l">Victorias</div></div><div class="st"><div class="v">'+D+'</div><div class="l">Empates</div></div><div class="st"><div class="v">'+L+'</div><div class="l">Derrotas</div></div><div class="st"><div class="v">'+GF+'</div><div class="l">Goles Favor</div></div><div class="st"><div class="v">'+GA+'</div><div class="l">Goles Contra</div></div><div class="st"><div class="v">'+(GF-GA)+'</div><div class="l">Diferencia</div></div><div class="st"><div class="v">'+winRate+'%</div><div class="l">% Victoria</div></div></div>'+
+          '<h2>Local vs Visitante</h2><table><thead><tr><th></th><th>Victorias</th><th>GF</th><th>GC</th></tr></thead><tbody><tr><td><strong>Local</strong></td><td>'+wH+'</td><td>'+gfH+'</td><td>'+gaH+'</td></tr><tr><td><strong>Visitante</strong></td><td>'+wA+'</td><td>'+gfA+'</td><td>'+gaA+'</td></tr></tbody></table>'+
+          '<h2>Datos Destacados</h2><table><tbody><tr><td>Mayor victoria (local)</td><td><strong>'+bWH+'</strong></td></tr><tr><td>Mayor victoria (visitante)</td><td><strong>'+bWA+'</strong></td></tr><tr><td>Mayor derrota (local)</td><td><strong>'+bLH+'</strong></td></tr><tr><td>Mayor derrota (visitante)</td><td><strong>'+bLA+'</strong></td></tr><tr><td>Racha victorias</td><td><strong>'+streakW+'</strong></td></tr><tr><td>Racha empates</td><td><strong>'+streakD+'</strong></td></tr><tr><td>Racha derrotas</td><td><strong>'+streakL+'</strong></td></tr><tr><td>Penales anotados/fallados</td><td><strong>'+pen+'/'+penM+'</strong></td></tr><tr><td>Porterias invictas</td><td><strong>'+cs+'</strong></td></tr><tr><td>Prom. goles/partido</td><td><strong>'+(P>0?(GF/P).toFixed(2):'-')+'</strong></td></tr></tbody></table>'+
+          '<h2>Forma Reciente</h2><div class="fr">'+formH+'</div>'+
+          '<div class="ft">Reporte generado por Futbol Analytics | '+new Date().toLocaleString('es')+'</div></body></html>');
+        w.document.close();
+      }
+
+      return (
+        <div>
+          <div className="team-dash-header">
+            <img src={team.logo} alt=""/>
+            <div><h2>{team.name}</h2><div className="sub">Temporada {season}/{season+1} | Posicion #{rank}</div></div>
+            <button className="btn btn-primary" onClick={genReport} style={{marginLeft:'auto'}}>Generar Reporte</button>
+          </div>
+
+          <div className="kpi-row">
+            <div className="kpi"><div className="kpi-val">{rank}</div><div className="kpi-label">Posicion</div></div>
+            <div className="kpi"><div className="kpi-val">{P}</div><div className="kpi-label">Partidos</div></div>
+            <div className="kpi"><div className="kpi-val">{winRate}%</div><div className="kpi-label">% Victoria</div><div className="progress-bar"><div className="fill" style={{width:winRate+'%',background:'#22c55e'}}></div></div></div>
+            <div className="kpi"><div className="kpi-val">{GF-GA}</div><div className="kpi-label">Diferencia de Goles</div><div className={'kpi-sub'+(GF-GA<0?' neg':'')}>{GF} GF / {GA} GC</div></div>
+          </div>
+
+          <div className="stats-row">
+            {[[W,'Victorias'],[D,'Empates'],[L,'Derrotas'],[GF,'GF'],[GA,'GC'],[cs,'Porterias 0'],[pen,'Penales'],[P>0?(GF/P).toFixed(1):'0','Goles/Partido']].map(function(x){return <div className="stat-card" key={x[1]}><div className="value">{x[0]}</div><div className="label">{x[1]}</div></div>;})}
+          </div>
+
+          <div className="panel-grid">
+            <div className="panel">
+              <h3>Distribucion de Resultados</h3>
+              <ChartWrap type="doughnut" data={{labels:['Victorias','Empates','Derrotas'],datasets:[{data:[W,D,L],backgroundColor:['#22c55e','#f59e0b','#ef4444'],borderWidth:0}]}} height="260px" options={{plugins:{legend:{position:'bottom'}}}}/>
+            </div>
+            <div className="panel">
+              <h3>Goles Local vs Visitante</h3>
+              <ChartWrap type="bar" data={{labels:['Local','Visitante'],datasets:[{label:'A Favor',data:[gfH,gfA],backgroundColor:'#3b82f6',borderRadius:4},{label:'En Contra',data:[gaH,gaA],backgroundColor:'#ef4444',borderRadius:4}]}} height="260px" options={{scales:{x:{grid:{display:false},ticks:{color:'#aaa'}},y:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#888'}}}}}/>
+            </div>
+          </div>
+
+          <div className="panel">
+            <h3>Datos Destacados</h3>
+            <div className="panel-grid">
+              <table className="standings-table"><tbody>
+                <tr><td style={{color:'#888'}}>Mayor victoria (local)</td><td className="pts">{bWH}</td></tr>
+                <tr><td style={{color:'#888'}}>Mayor victoria (visitante)</td><td className="pts">{bWA}</td></tr>
+                <tr><td style={{color:'#888'}}>Mayor derrota (local)</td><td style={{color:'#ef4444'}}>{bLH}</td></tr>
+                <tr><td style={{color:'#888'}}>Mayor derrota (visitante)</td><td style={{color:'#ef4444'}}>{bLA}</td></tr>
+              </tbody></table>
+              <table className="standings-table"><tbody>
+                <tr><td style={{color:'#888'}}>Racha victorias</td><td className="pts">{streakW} partidos</td></tr>
+                <tr><td style={{color:'#888'}}>Racha empates</td><td style={{color:'#f59e0b'}}>{streakD} partidos</td></tr>
+                <tr><td style={{color:'#888'}}>Racha derrotas</td><td style={{color:'#ef4444'}}>{streakL} partidos</td></tr>
+                <tr><td style={{color:'#888'}}>Penales (anotados/fallados)</td><td className="pts">{pen}/{penM}</td></tr>
+              </tbody></table>
+            </div>
+          </div>
+
+          <div className="panel">
+            <h3>Forma Reciente (ultimos 10 partidos)</h3>
+            <div className="form-dots" style={{gap:'4px'}}>
+              {form.split('').slice(-10).map(function(c,i){return <span key={i} className={'form-dot '+(c==='W'?'form-w':c==='D'?'form-d':'form-l')} style={{width:'28px',height:'28px',fontSize:'.72rem'}}>{c==='W'?'V':c==='D'?'E':'D'}</span>;})}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ================================================================
+       ML: K-MEANS CLUSTERING
+       ================================================================ */
+    function normalize(arr) {
+      var min = Math.min.apply(null, arr), max = Math.max.apply(null, arr);
+      var range = max - min || 1;
+      return arr.map(function(v) { return (v - min) / range; });
+    }
+
+    function kmeans(points, k, maxIter) {
+      if (!points.length || k < 1) return { clusters: [], centroids: [] };
+      k = Math.min(k, points.length);
+      var dim = points[0].length;
+      var centroids = [];
+      var used = {};
+      for (var i = 0; i < k; i++) {
+        var idx;
+        do { idx = Math.floor(Math.random() * points.length); } while (used[idx] && Object.keys(used).length < points.length);
+        used[idx] = true;
+        centroids.push(points[idx].slice());
+      }
+      var assignments = new Array(points.length);
+      for (var iter = 0; iter < (maxIter || 50); iter++) {
+        var changed = false;
+        for (var p = 0; p < points.length; p++) {
+          var bestD = Infinity, bestC = 0;
+          for (var c = 0; c < k; c++) {
+            var d = 0;
+            for (var dd = 0; dd < dim; dd++) d += Math.pow(points[p][dd] - centroids[c][dd], 2);
+            if (d < bestD) { bestD = d; bestC = c; }
+          }
+          if (assignments[p] !== bestC) { assignments[p] = bestC; changed = true; }
+        }
+        if (!changed) break;
+        for (var c2 = 0; c2 < k; c2++) {
+          var sum = new Array(dim).fill(0), cnt = 0;
+          for (var p2 = 0; p2 < points.length; p2++) {
+            if (assignments[p2] === c2) { for (var dd2 = 0; dd2 < dim; dd2++) sum[dd2] += points[p2][dd2]; cnt++; }
+          }
+          if (cnt > 0) { for (var dd3 = 0; dd3 < dim; dd3++) centroids[c2][dd3] = sum[dd3] / cnt; }
+        }
+      }
+      return { assignments: assignments, centroids: centroids };
+    }
+
+    function linearRegression(x, y) {
+      var n = x.length;
+      if (n < 2) return { slope: 0, intercept: 0, r2: 0 };
+      var sx = 0, sy = 0, sxy = 0, sx2 = 0, sy2 = 0;
+      for (var i = 0; i < n; i++) { sx += x[i]; sy += y[i]; sxy += x[i]*y[i]; sx2 += x[i]*x[i]; sy2 += y[i]*y[i]; }
+      var denom = n * sx2 - sx * sx;
+      if (denom === 0) return { slope: 0, intercept: sy/n, r2: 0 };
+      var slope = (n * sxy - sx * sy) / denom;
+      var intercept = (sy - slope * sx) / n;
+      var yMean = sy / n;
+      var ssTot = 0, ssRes = 0;
+      for (var j = 0; j < n; j++) { ssTot += Math.pow(y[j] - yMean, 2); ssRes += Math.pow(y[j] - (slope * x[j] + intercept), 2); }
+      var r2 = ssTot > 0 ? 1 - ssRes / ssTot : 0;
+      return { slope: slope, intercept: intercept, r2: r2 };
+    }
+
+    var AVAILABLE_VARS = [
+      { key: 'pts', label: 'Puntos', get: function(t) { return t.points; } },
+      { key: 'ppg', label: 'Puntos/Partido', get: function(t) { return t.all.played > 0 ? t.points / t.all.played : 0; } },
+      { key: 'gf', label: 'Goles a Favor', get: function(t) { return t.all.goals['for']; } },
+      { key: 'ga', label: 'Goles en Contra', get: function(t) { return t.all.goals.against; } },
+      { key: 'gd', label: 'Diferencia de Goles', get: function(t) { return t.goalsDiff; } },
+      { key: 'w', label: 'Victorias', get: function(t) { return t.all.win; } },
+      { key: 'wr', label: '% Victorias', get: function(t) { return t.all.played > 0 ? Math.round(t.all.win / t.all.played * 100) : 0; } },
+      { key: 'd', label: 'Empates', get: function(t) { return t.all.draw; } },
+      { key: 'l', label: 'Derrotas', get: function(t) { return t.all.lose; } },
+      { key: 'gfpg', label: 'Goles Favor/Partido', get: function(t) { return t.all.played > 0 ? +(t.all.goals['for'] / t.all.played).toFixed(2) : 0; } },
+      { key: 'gapg', label: 'Goles Contra/Partido', get: function(t) { return t.all.played > 0 ? +(t.all.goals.against / t.all.played).toFixed(2) : 0; } }
+    ];
+
+    /* ================================================================
+       PAGE: MODELOS PREDICTIVOS
+       ================================================================ */
+    function PageModelos(props) {
+      var leagueId = props.leagueId, season = props.season, standings = props.standings;
+      var _tb = useState('clustering'), tab = _tb[0], setTab = _tb[1];
+
+      if (!leagueId || !standings.length) return <div className="empty-state"><div className="icon">&#129302;</div><h3>Selecciona una liga con datos</h3><p>Usa los filtros para elegir pais, liga y temporada. Prueba con temporada 2024 si 2025/2026 no tiene datos.</p></div>;
+
+      var tabs = { clustering: 'Clustering', regresion: 'Regresion', predictor: 'Predictor de Partidos', correlacion: 'Correlaciones' };
+      return (
+        <div>
+          <div className="tabs">
+            {Object.keys(tabs).map(function(t) { return <button key={t} className={'tab' + (tab === t ? ' active' : '')} onClick={function() { setTab(t); }}>{tabs[t]}</button>; })}
+          </div>
+          {tab === 'clustering' && <ClusteringPanel standings={standings}/>}
+          {tab === 'regresion' && <RegressionPanel standings={standings}/>}
+          {tab === 'predictor' && <PredictorPanel standings={standings}/>}
+          {tab === 'correlacion' && <CorrelationPanel standings={standings}/>}
+        </div>
+      );
+    }
+
+    /* ── Clustering ── */
+    function ClusteringPanel(props) {
+      var standings = props.standings;
+      var _v1 = useState('gf'), varX = _v1[0], setVarX = _v1[1];
+      var _v2 = useState('ga'), varY = _v2[0], setVarY = _v2[1];
+      var _k = useState(3), k = _k[0], setK = _k[1];
+      var _result = useState(null), result = _result[0], setResult = _result[1];
+
+      var vxDef = AVAILABLE_VARS.find(function(v) { return v.key === varX; });
+      var vyDef = AVAILABLE_VARS.find(function(v) { return v.key === varY; });
+
+      function run() {
+        var xVals = standings.map(function(t) { return vxDef.get(t); });
+        var yVals = standings.map(function(t) { return vyDef.get(t); });
+        var xNorm = normalize(xVals);
+        var yNorm = normalize(yVals);
+        var points = xNorm.map(function(x, i) { return [x, yNorm[i]]; });
+        var km = kmeans(points, k, 100);
+
+        var clusterColors = ['#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#a855f7'];
+        var datasets = [];
+        for (var c = 0; c < k; c++) {
+          var pts = [];
+          var labels = [];
+          for (var i = 0; i < standings.length; i++) {
+            if (km.assignments[i] === c) {
+              pts.push({ x: xVals[i], y: yVals[i] });
+              labels.push(standings[i].team.name);
+            }
+          }
+          datasets.push({ label: 'Cluster ' + (c + 1), data: pts, backgroundColor: clusterColors[c % 5], pointRadius: 8, pointHoverRadius: 12 });
+        }
+        var clusterInfo = [];
+        for (var c2 = 0; c2 < k; c2++) {
+          var members = [];
+          for (var i2 = 0; i2 < standings.length; i2++) {
+            if (km.assignments[i2] === c2) members.push(standings[i2]);
+          }
+          clusterInfo.push({ id: c2, members: members, color: clusterColors[c2 % 5] });
+        }
+        setResult({ datasets: datasets, clusterInfo: clusterInfo });
+      }
+
+      useEffect(function() { if (standings.length > 0) run(); }, [varX, varY, k, standings]);
+
+      var varSelect = function(value, onChange, label) {
+        return (
+          <div className="filter-group">
+            <label>{label}</label>
+            <select className="filter-select" value={value} onChange={function(e) { onChange(e.target.value); }}>
+              {AVAILABLE_VARS.map(function(v) { return <option key={v.key} value={v.key}>{v.label}</option>; })}
+            </select>
+          </div>
+        );
+      };
+
+      return (
+        <div>
+          <div className="panel">
+            <h3>Clustering de Equipos (K-Means)</h3>
+            <p className="panel-subtitle">Agrupa equipos similares segun las variables seleccionadas. Selecciona variables de los ejes y numero de clusters.</p>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px', alignItems: 'center' }}>
+              {varSelect(varX, setVarX, 'Eje X')}
+              {varSelect(varY, setVarY, 'Eje Y')}
+              <div className="filter-group">
+                <label>Clusters (K)</label>
+                <select className="filter-select" style={{ minWidth: '70px' }} value={k} onChange={function(e) { setK(parseInt(e.target.value)); }}>
+                  <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+                </select>
+              </div>
+              <button className="btn btn-primary btn-sm" onClick={run}>Recalcular</button>
+            </div>
+            {result && (
+              <ChartWrap type="scatter" data={{ datasets: result.datasets }} height="400px" options={{
+                scales: {
+                  x: { title: { display: true, text: vxDef.label, color: '#aaa' }, grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#888' } },
+                  y: { title: { display: true, text: vyDef.label, color: '#aaa' }, grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#888' } }
+                },
+                plugins: { tooltip: { callbacks: { label: function(ctx) { var idx = ctx.dataIndex; var ds = ctx.datasetIndex; var team = result.clusterInfo[ds] && result.clusterInfo[ds].members[idx]; return team ? team.team.name + ' (' + ctx.raw.x + ', ' + ctx.raw.y + ')' : ''; } } } }
+              }}/>
+            )}
+          </div>
+          {result && result.clusterInfo.map(function(cl) {
+            return (
+              <div key={cl.id} className="panel" style={{ borderLeft: '3px solid ' + cl.color }}>
+                <h3 style={{ color: cl.color }}>Cluster {cl.id + 1} ({cl.members.length} equipos)</h3>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {cl.members.map(function(t) {
+                    return <div key={t.team.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,.04)', borderRadius: '6px', padding: '4px 8px' }}>
+                      <img src={t.team.logo} alt="" style={{ width: '16px', height: '16px' }}/><span style={{ fontSize: '.78rem' }}>{t.team.name}</span>
+                    </div>;
+                  })}
+                </div>
+                <div style={{ fontSize: '.75rem', color: '#888', marginTop: '8px' }}>
+                  Prom. {vxDef.label}: {(cl.members.reduce(function(s, t) { return s + vxDef.get(t); }, 0) / cl.members.length).toFixed(1)} | Prom. {vyDef.label}: {(cl.members.reduce(function(s, t) { return s + vyDef.get(t); }, 0) / cl.members.length).toFixed(1)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    /* ── Regresion ── */
+    function RegressionPanel(props) {
+      var standings = props.standings;
+      var _vx = useState('gf'), varX = _vx[0], setVarX = _vx[1];
+      var _vy = useState('pts'), varY = _vy[0], setVarY = _vy[1];
+
+      var vxDef = AVAILABLE_VARS.find(function(v) { return v.key === varX; });
+      var vyDef = AVAILABLE_VARS.find(function(v) { return v.key === varY; });
+
+      var xVals = standings.map(function(t) { return vxDef.get(t); });
+      var yVals = standings.map(function(t) { return vyDef.get(t); });
+      var reg = linearRegression(xVals, yVals);
+
+      var minX = Math.min.apply(null, xVals), maxX = Math.max.apply(null, xVals);
+      var scatterData = standings.map(function(t, i) { return { x: xVals[i], y: yVals[i] }; });
+      var lineData = [{ x: minX, y: reg.slope * minX + reg.intercept }, { x: maxX, y: reg.slope * maxX + reg.intercept }];
+
+      var chartData = {
+        datasets: [
+          { label: 'Equipos', data: scatterData, backgroundColor: '#3b82f6', pointRadius: 7, pointHoverRadius: 10, type: 'scatter' },
+          { label: 'Linea de Regresion', data: lineData, borderColor: '#ef4444', borderWidth: 2, pointRadius: 0, type: 'line', fill: false }
+        ]
+      };
+
+      return (
+        <div>
+          <div className="panel">
+            <h3>Regresion Lineal</h3>
+            <p className="panel-subtitle">Analiza la relacion entre dos variables. R² indica que tan bien una variable predice la otra (1.0 = perfecto).</p>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
+              <div className="filter-group"><label>Variable X</label>
+                <select className="filter-select" value={varX} onChange={function(e) { setVarX(e.target.value); }}>
+                  {AVAILABLE_VARS.map(function(v) { return <option key={v.key} value={v.key}>{v.label}</option>; })}
+                </select>
+              </div>
+              <div className="filter-group"><label>Variable Y</label>
+                <select className="filter-select" value={varY} onChange={function(e) { setVarY(e.target.value); }}>
+                  {AVAILABLE_VARS.map(function(v) { return <option key={v.key} value={v.key}>{v.label}</option>; })}
+                </select>
+              </div>
+            </div>
+            <div className="kpi-row" style={{ marginBottom: '16px' }}>
+              <div className="kpi"><div className="kpi-val" style={{ color: reg.r2 > 0.7 ? '#22c55e' : reg.r2 > 0.4 ? '#f59e0b' : '#ef4444' }}>{reg.r2.toFixed(3)}</div><div className="kpi-label">R² (Ajuste)</div></div>
+              <div className="kpi"><div className="kpi-val">{reg.slope.toFixed(3)}</div><div className="kpi-label">Pendiente</div></div>
+              <div className="kpi"><div className="kpi-val">{reg.intercept.toFixed(2)}</div><div className="kpi-label">Intercepto</div></div>
+            </div>
+            <div className="insight-card">
+              <h4>Interpretacion</h4>
+              <p>{reg.r2 > 0.7 ? 'Relacion fuerte: ' : reg.r2 > 0.4 ? 'Relacion moderada: ' : 'Relacion debil: '} Por cada unidad adicional de {vxDef.label}, {vyDef.label} {reg.slope >= 0 ? 'aumenta' : 'disminuye'} en promedio {Math.abs(reg.slope).toFixed(2)} unidades. El modelo explica el {(reg.r2 * 100).toFixed(1)}% de la variacion.</p>
+            </div>
+            <ChartWrap type="scatter" data={chartData} height="380px" options={{
+              scales: {
+                x: { title: { display: true, text: vxDef.label, color: '#aaa' }, grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#888' } },
+                y: { title: { display: true, text: vyDef.label, color: '#aaa' }, grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#888' } }
+              },
+              plugins: { tooltip: { callbacks: { label: function(ctx) { if (ctx.datasetIndex === 0) return standings[ctx.dataIndex].team.name + ' (' + ctx.raw.x + ', ' + ctx.raw.y + ')'; return ''; } } } }
+            }}/>
+          </div>
+        </div>
+      );
+    }
+
+    /* ── Predictor de Partidos ── */
+    function PredictorPanel(props) {
+      var standings = props.standings;
+      var _h = useState(standings.length > 0 ? standings[0].team.id : ''), homeId = _h[0], setHomeId = _h[1];
+      var _a = useState(standings.length > 1 ? standings[1].team.id : ''), awayId = _a[0], setAwayId = _a[1];
+
+      var home = standings.find(function(t) { return t.team.id === parseInt(homeId); });
+      var away = standings.find(function(t) { return t.team.id === parseInt(awayId); });
+
+      var prediction = null;
+      if (home && away && home.team.id !== away.team.id) {
+        var hPpg = home.all.played > 0 ? home.points / home.all.played : 0;
+        var aPpg = away.all.played > 0 ? away.points / away.all.played : 0;
+        var hGfpg = home.all.played > 0 ? home.all.goals['for'] / home.all.played : 0;
+        var aGfpg = away.all.played > 0 ? away.all.goals['for'] / away.all.played : 0;
+        var hGapg = home.all.played > 0 ? home.all.goals.against / home.all.played : 0;
+        var aGapg = away.all.played > 0 ? away.all.goals.against / away.all.played : 0;
+        var hWr = home.all.played > 0 ? home.all.win / home.all.played : 0;
+        var aWr = away.all.played > 0 ? away.all.win / away.all.played : 0;
+
+        var homeAdv = 0.1;
+        var hStr = (hPpg / 3) * 0.35 + hWr * 0.25 + (hGfpg / (hGfpg + aGfpg + 0.01)) * 0.2 + (1 - hGapg / (hGapg + aGapg + 0.01)) * 0.2 + homeAdv;
+        var aStr = (aPpg / 3) * 0.35 + aWr * 0.25 + (aGfpg / (hGfpg + aGfpg + 0.01)) * 0.2 + (1 - aGapg / (hGapg + aGapg + 0.01)) * 0.2;
+        var total = hStr + aStr + 0.15;
+        var pHome = Math.round(hStr / total * 100);
+        var pAway = Math.round(aStr / total * 100);
+        var pDraw = 100 - pHome - pAway;
+        if (pDraw < 5) { pDraw = 5; var excess = pHome > pAway ? 'h' : 'a'; if (excess === 'h') pHome -= 5; else pAway -= 5; pHome = Math.max(pHome, 5); pAway = Math.max(pAway, 5); pDraw = 100 - pHome - pAway; }
+
+        var expHG = (hGfpg + aGapg) / 2;
+        var expAG = (aGfpg + hGapg) / 2;
+
+        prediction = { pHome: pHome, pDraw: pDraw, pAway: pAway, expHG: expHG.toFixed(1), expAG: expAG.toFixed(1), hStr: hStr, aStr: aStr };
+      }
+
+      return (
+        <div>
+          <div className="panel">
+            <h3>Predictor de Partidos</h3>
+            <p className="panel-subtitle">Selecciona dos equipos para predecir el resultado basado en estadisticas de la temporada (PPG, goles, % victorias, ventaja local).</p>
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '20px', alignItems: 'center' }}>
+              <div className="filter-group"><label>Local</label>
+                <select className="filter-select" value={homeId} onChange={function(e) { setHomeId(e.target.value); }}>
+                  {standings.map(function(t) { return <option key={t.team.id} value={t.team.id}>{t.team.name}</option>; })}
+                </select>
+              </div>
+              <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#555' }}>vs</span>
+              <div className="filter-group"><label>Visitante</label>
+                <select className="filter-select" value={awayId} onChange={function(e) { setAwayId(e.target.value); }}>
+                  {standings.map(function(t) { return <option key={t.team.id} value={t.team.id}>{t.team.name}</option>; })}
+                </select>
+              </div>
+            </div>
+
+            {prediction && home && away && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <img src={home.team.logo} alt="" style={{ width: '48px', height: '48px' }}/>
+                    <div style={{ fontSize: '.85rem', color: '#fff', marginTop: '4px' }}>{home.team.name}</div>
+                    <div style={{ fontSize: '2rem', fontWeight: 800, color: '#3b82f6' }}>{prediction.pHome}%</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '.75rem', color: '#888' }}>Empate</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f59e0b' }}>{prediction.pDraw}%</div>
+                    <div style={{ fontSize: '1.1rem', color: '#666', marginTop: '8px' }}>{prediction.expHG} - {prediction.expAG}</div>
+                    <div style={{ fontSize: '.7rem', color: '#555' }}>Goles esperados</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <img src={away.team.logo} alt="" style={{ width: '48px', height: '48px' }}/>
+                    <div style={{ fontSize: '.85rem', color: '#fff', marginTop: '4px' }}>{away.team.name}</div>
+                    <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ef4444' }}>{prediction.pAway}%</div>
+                  </div>
+                </div>
+
+                <ChartWrap type="bar" data={{
+                  labels: [home.team.name, 'Empate', away.team.name],
+                  datasets: [{ data: [prediction.pHome, prediction.pDraw, prediction.pAway], backgroundColor: ['#3b82f6', '#f59e0b', '#ef4444'], borderRadius: 6 }]
+                }} height="200px" options={{ indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#888', callback: function(v) { return v + '%'; } } }, y: { grid: { display: false }, ticks: { color: '#ccc' } } } }}/>
+
+                <div className="panel-grid" style={{ marginTop: '16px' }}>
+                  <div className="insight-card">
+                    <h4>{home.team.name} (Local)</h4>
+                    <p>Pos: #{home.rank} | PPG: {(home.points / Math.max(home.all.played, 1)).toFixed(2)} | GF/P: {(home.all.goals['for'] / Math.max(home.all.played, 1)).toFixed(2)} | Forma: {(home.form || '').slice(-5)}</p>
+                  </div>
+                  <div className="insight-card">
+                    <h4>{away.team.name} (Visitante)</h4>
+                    <p>Pos: #{away.rank} | PPG: {(away.points / Math.max(away.all.played, 1)).toFixed(2)} | GF/P: {(away.all.goals['for'] / Math.max(away.all.played, 1)).toFixed(2)} | Forma: {(away.form || '').slice(-5)}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {home && away && home.team.id === away.team.id && <div className="empty-state"><p>Selecciona dos equipos diferentes.</p></div>}
+          </div>
+        </div>
+      );
+    }
+
+    /* ── Correlaciones ── */
+    function CorrelationPanel(props) {
+      var standings = props.standings;
+      var target = 'pts';
+      var results = AVAILABLE_VARS.filter(function(v) { return v.key !== 'pts'; }).map(function(v) {
+        var x = standings.map(function(t) { return v.get(t); });
+        var y = standings.map(function(t) { return t.points; });
+        var reg = linearRegression(x, y);
+        var r = reg.r2 > 0 ? (reg.slope >= 0 ? Math.sqrt(reg.r2) : -Math.sqrt(reg.r2)) : 0;
+        return { key: v.key, label: v.label, r: r, r2: reg.r2 };
+      });
+      results.sort(function(a, b) { return Math.abs(b.r) - Math.abs(a.r); });
+
+      return (
+        <div className="panel">
+          <h3>Correlaciones con Puntos</h3>
+          <p className="panel-subtitle">Que variables tienen mayor relacion con el exito (puntos). r cercano a 1 o -1 indica relacion fuerte.</p>
+          <table className="standings-table">
+            <thead><tr><th>Variable</th><th>Correlacion (r)</th><th>R²</th><th>Fuerza</th><th></th></tr></thead>
+            <tbody>
+              {results.map(function(r) {
+                var absR = Math.abs(r.r);
+                var color = absR > 0.7 ? '#22c55e' : absR > 0.4 ? '#f59e0b' : '#ef4444';
+                var strength = absR > 0.7 ? 'Fuerte' : absR > 0.4 ? 'Moderada' : 'Debil';
+                return (
+                  <tr key={r.key}>
+                    <td style={{ fontWeight: 600 }}>{r.label}</td>
+                    <td style={{ color: color, fontWeight: 700 }}>{r.r >= 0 ? '+' : ''}{r.r.toFixed(3)}</td>
+                    <td>{r.r2.toFixed(3)}</td>
+                    <td style={{ color: color }}>{strength}</td>
+                    <td><div className="progress-bar" style={{ width: '80px' }}><div className="fill" style={{ width: (absR * 100) + '%', background: color }}></div></div></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    /* ================================================================
+       MAIN APP
+       ================================================================ */
+    function App() {
+      var _pg=useState('marcadores'), page=_pg[0], setPage=_pg[1];
+      var _ak=useState(!!getApiKey()), hasKey=_ak[0], setHasKey=_ak[1];
+      var _sc=useState(!getApiKey()), showCfg=_sc[0], setShowCfg=_sc[1];
+      var _co=useState([]), countries=_co[0], setCountries=_co[1];
+      var _lg=useState([]), leagues=_lg[0], setLeagues=_lg[1];
+      var _c=useState(''), selC=_c[0], setSelC=_c[1];
+      var _l=useState(''), selL=_l[0], setSelL=_l[1];
+      var _s=useState(currentSeason()), selS=_s[0], setSelS=_s[1];
+      var _st=useState([]), standings=_st[0], setSt=_st[1];
+
+      useEffect(function() {
+        if (!hasKey) return;
+        fetchCountries().then(function(c){c.sort(function(a,b){return a.name.localeCompare(b.name);});setCountries(c);}).catch(function(){});
+      }, [hasKey]);
+
+      useEffect(function() {
+        if (!selC){setLeagues([]);setSelL('');return;}
+        fetchLeagues(selC).then(function(l){
+          var f=l.filter(function(x){return x.league.type==='League'||x.league.type==='Cup';});
+          f.sort(function(a,b){return a.league.name.localeCompare(b.league.name);});
+          setLeagues(f); setSelL('');
+        }).catch(function(){setLeagues([]);});
+      }, [selC]);
+
+      useEffect(function() {
+        if (!selL){setSt([]);return;}
+        fetchStandings(selL,selS).then(function(r){setSt(extractStandings(r));}).catch(function(){setSt([]);});
+      }, [selL, selS]);
+
+      function onApiSave(){var h=!!getApiKey();setHasKey(h);setShowCfg(!h);}
+      var lid = selL ? parseInt(selL) : null;
+
+      return (
+        <div>
+          <header className="header"><div className="header-inner">
+            <div className="header-top">
+              <h1><span className="live-dot"></span> Futbol Analytics</h1>
+              <button className="settings-toggle" onClick={function(){setShowCfg(!showCfg);}}>{showCfg?'Cerrar':'API Key'}</button>
+            </div>
+            <div className="nav">
+              <button className={'nav-btn'+(page==='marcadores'?' active':'')} onClick={function(){setPage('marcadores');}}>Marcadores</button>
+              <button className={'nav-btn'+(page==='analytics'?' active':'')} onClick={function(){setPage('analytics');}}>Analytics</button>
+              <button className={'nav-btn'+(page==='equipos'?' active':'')} onClick={function(){setPage('equipos');}}>Equipos</button>
+              <button className={'nav-btn'+(page==='modelos'?' active':'')} onClick={function(){setPage('modelos');}}>Modelos</button>
+            </div>
+          </div></header>
+
+          {hasKey && (
+            <div className="filters"><div className="filters-inner">
+              <div className="filter-group"><label>Pais</label>
+                <select className="filter-select" value={selC} onChange={function(e){setSelC(e.target.value);}}>
+                  <option value="">-- Seleccionar --</option>
+                  {countries.map(function(c){return <option key={c.name} value={c.name}>{c.name}</option>;})}
+                </select>
+              </div>
+              <div className="filter-group"><label>Liga</label>
+                <select className="filter-select" value={selL} onChange={function(e){setSelL(e.target.value);}} disabled={!selC}>
+                  <option value="">-- Seleccionar --</option>
+                  {leagues.map(function(l){return <option key={l.league.id} value={l.league.id}>{l.league.name}</option>;})}
+                </select>
+              </div>
+              <div className="filter-group"><label>Temporada</label>
+                <select className="filter-select" value={selS} onChange={function(e){setSelS(parseInt(e.target.value));}}>
+                  <option value="2026">2026</option><option value="2025">2025</option><option value="2024">2024</option><option value="2023">2023</option>
+                </select>
+              </div>
+            </div></div>
+          )}
+
+          {showCfg && <ApiKeySetup onSave={onApiSave}/>}
+
+          <main className="main">
+            {!hasKey && !showCfg && <div className="empty-state"><div className="icon">&#128273;</div><h3>Configura tu API Key</h3><p>Haz clic en "API Key" arriba.</p></div>}
+            {hasKey && page==='marcadores' && <PageMarcadores leagueId={lid} season={selS}/>}
+            {hasKey && page==='analytics' && <PageAnalytics leagueId={lid} season={selS}/>}
+            {hasKey && page==='equipos' && <PageEquipos leagueId={lid} season={selS} standings={standings}/>}
+            {hasKey && page==='modelos' && <PageModelos leagueId={lid} season={selS} standings={standings}/>}
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+  <script>setTimeout(function(){var r=document.getElementById('root');if(r&&r.querySelector('.spinner')){r.innerHTML='<div style="background:#1a0000;border:2px solid #ff4444;color:#ff8888;padding:20px;margin:20px;border-radius:8px;font-family:monospace"><h3>Error cargando la app</h3><p>Verifica tu conexion a internet. La app necesita cargar React y Chart.js desde CDN.</p></div>';}},10000);</script>
+</body>
+</html>
