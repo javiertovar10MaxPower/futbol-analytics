@@ -1,0 +1,24 @@
+[project]
+name = "ai-news-agent"
+version = "0.1.0"
+description = "Agente semanal que recopila novedades de IA y envía un resumen a Outlook"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.92.0",
+    "jinja2>=3.1.0",
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.7",
+]
+
+[project.scripts]
+ai-news-agent = "ai_news_agent.agent:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["ai_news_agent"]
+
+[tool.setuptools.package-data]
+ai_news_agent = ["templates/*.j2"]
